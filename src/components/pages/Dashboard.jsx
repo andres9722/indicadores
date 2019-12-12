@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import firebase from "firebase/app";
 import "firebase/firestore";
 import serialize from "form-serialize";
+import { Link } from "react-router-dom";
 import {
   Button,
   Form,
@@ -16,7 +17,9 @@ import {
   Table,
   Divider,
   Header as UIHeader,
-  Modal
+  Modal,
+  List,
+  Card
 } from "semantic-ui-react";
 import IndicatorCalcNumerador from "./IndicatorCalcNumerador";
 
@@ -104,6 +107,7 @@ const optionsType = [
 const Dashboard = () => {
   // Estado de la aplicacion
   const [indicators, setIndicators] = useState([]);
+  const [groups, setGroups] = useState([]);
 
   // Metodos de la base de datos
   const database = firebase.firestore();
@@ -118,6 +122,15 @@ const Dashboard = () => {
         arr.push({ ...doc.data(), id: doc.id });
 
         setIndicators(arr);
+      });
+    });
+
+    database.collection("groups").onSnapshot(querySnapshot => {
+      let arr = [];
+      querySnapshot.forEach(doc => {
+        arr.push({ ...doc.data(), id: doc.id });
+
+        setGroups(arr);
       });
     });
   }, []);
@@ -139,6 +152,35 @@ const Dashboard = () => {
       })
       .catch(() => {
         toast.error("Error guardando comentario!", {
+          position: toast.POSITION.BOTTOM_RIGHT
+        });
+      });
+
+    // Vacear el formulario
+    form.reset();
+  };
+
+  const handleSubmitGroup = e => {
+    const form = document.querySelector(".formulario-grupo");
+
+    let data = serialize(form, { hash: true });
+
+    data = {
+      ...data,
+      indicators: []
+    };
+
+    database
+      .collection("groups")
+      .add(data)
+      .then(docRef => {
+        toast("Proceso guardado correctamente!", {
+          position: toast.POSITION.BOTTOM_RIGHT,
+          autoClose: 3000
+        });
+      })
+      .catch(() => {
+        toast.error("Error guardando proceso!", {
           position: toast.POSITION.BOTTOM_RIGHT
         });
       });
@@ -172,188 +214,46 @@ const Dashboard = () => {
       <Header />
       <Page>
         <div className="dashboard">
-          <div className="dashboard-profile">
-            {/* <ProfileInfo {...user} /> */}
-            Sesion iniciada
-          </div>
+          <div className="dashboard-profile">Sesion iniciada</div>
 
-          <Form className="formulario" onSubmit={handleSubmit} size="large">
+          <Form className="formulario-grupo" onSubmit={handleSubmitGroup}>
             <Form.Group widths="equal">
               <Form.Field>
-                <label>Nombre del indicador</label>
+                <label>Nombre del grupo</label>
                 <input
-                  name="name"
+                  name="groupName"
                   required
-                  placeholder="Nombre del indicador"
+                  placeholder="Nombre del grupo"
                 />
-              </Form.Field>
-              <Form.Field>
-                <label>Numero del indicador</label>
-                <input
-                  name="number"
-                  required
-                  placeholder="Numero del indicador"
-                />
-              </Form.Field>
-            </Form.Group>
-            <Form.Group widths="equal">
-              <Form.Select
-                name="process"
-                fluid
-                label="Proceso al que pertenece"
-                options={options}
-                placeholder="Proceso"
-                required
-              />
-              <Form.Select
-                name="type"
-                fluid
-                label="Tipo de indicador"
-                options={optionsType}
-                placeholder="Tipo"
-                required
-              />
-            </Form.Group>
-            <Form.Field
-              name="opinion"
-              id="form-textarea-control-opinion"
-              control={TextArea}
-              label="Opinion"
-              placeholder="Opinion"
-              required
-            />
-            <Form.Group widths="equal">
-              <Form.Field>
-                <label>Encargado del proceso</label>
-                <input
-                  name="incharge"
-                  required
-                  placeholder="Encargado del proceso"
-                />
-              </Form.Field>
-              <Form.Field>
-                <label>Lider del proceso</label>
-                <input name="lead" required placeholder="Lider del proceso" />
-              </Form.Field>
-              <Form.Field>
-                <label>Fuente</label>
-                <input name="source" required placeholder="Fuente" />
               </Form.Field>
             </Form.Group>
             <Button primary type="submit">
               Guardar
             </Button>
           </Form>
+
+          <Card.Group itemsPerRow={4}>
+            {groups.map(group => {
+              return (
+                <Link to={`/dashboard/process/${group.id}`}>
+                  <Card color="red">
+                    <Card.Content>
+                      <Card.Header>{group.groupName}</Card.Header>
+                      <Card.Meta>
+                        <span className="date">Creado en 2019</span>
+                      </Card.Meta>
+                      <Card.Description>
+                        Numero de Indicadores asociados: {indicators.length}
+                      </Card.Description>
+                    </Card.Content>
+                    <Card.Content extra></Card.Content>
+                  </Card>
+                </Link>
+              );
+            })}
+          </Card.Group>
         </div>
         <Divider />
-        <div>
-          <Table celled>
-            <Table.Header>
-              <Table.Row>
-                <Table.HeaderCell>Nombre</Table.HeaderCell>
-                <Table.HeaderCell>Numero</Table.HeaderCell>
-                <Table.HeaderCell>Opinion</Table.HeaderCell>
-                <Table.HeaderCell>Lider</Table.HeaderCell>
-                <Table.HeaderCell>Fuente</Table.HeaderCell>
-                <Table.HeaderCell>Excelente</Table.HeaderCell>
-                <Table.HeaderCell>Aceptable</Table.HeaderCell>
-                <Table.HeaderCell>Deficiente</Table.HeaderCell>
-                <Table.HeaderCell>Persona a cargo</Table.HeaderCell>
-                <Table.HeaderCell></Table.HeaderCell>
-                <Table.HeaderCell></Table.HeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {indicators.map(indicator => (
-                <Table.Row>
-                  <Table.Cell>{indicator.name}</Table.Cell>
-                  <Table.Cell>{indicator.number}</Table.Cell>
-                  <Table.Cell>{indicator.opinion}</Table.Cell>
-                  <Table.Cell>{indicator.lead}</Table.Cell>
-                  <Table.Cell>{indicator.source}</Table.Cell>
-                  <Table.Cell>95% > </Table.Cell>
-                  <Table.Cell>60% - 94%</Table.Cell>
-                  <Table.Cell> {"< 59%"} </Table.Cell>
-                  <Table.Cell>{indicator.incharge}</Table.Cell>
-                  <Table.Cell>
-                    <Button onClick={deleteAppt(indicator.id)} primary>
-                      Eliminar
-                    </Button>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Modal
-                      size="fullscreen"
-                      trigger={<Button secondary>Detalle</Button>}
-                    >
-                      <Modal.Header>Indicadores</Modal.Header>
-                      <Modal.Content>
-                        <p>
-                          <b>Nombre:</b> {indicator.name}
-                        </p>
-                        <p>
-                          <b>Número: </b> {indicator.number}
-                        </p>
-                        <p>
-                          <b>Lider:</b> {indicator.lead}
-                        </p>
-                        <p>
-                          <b>Encargado del proceso:</b> {indicator.incharge}
-                        </p>
-                        <p>
-                          <b>Fuente:</b> {indicator.source}
-                        </p>
-                        <Modal.Description>
-                          <Label as="a" color="green">
-                            Excelente
-                            <Label.Detail>95% ></Label.Detail>
-                          </Label>
-                          <Label as="a" color="yellow">
-                            Aceptable
-                            <Label.Detail>60% - 94%</Label.Detail>
-                          </Label>
-                          <Label as="a" color="orange">
-                            Deficiente
-                            <Label.Detail>{"< 59%"}</Label.Detail>
-                          </Label>
-                        </Modal.Description>
-                        <Divider />
-                        <Table celled>
-                          <Table.Header>
-                            <Table.Row>
-                              <Table.HeaderCell>Enero</Table.HeaderCell>
-                              <Table.HeaderCell>Febrero</Table.HeaderCell>
-                              <Table.HeaderCell>Marzo</Table.HeaderCell>
-                              <Table.HeaderCell>Abril</Table.HeaderCell>
-                              <Table.HeaderCell>Mayo</Table.HeaderCell>
-                              <Table.HeaderCell>Junio</Table.HeaderCell>
-                              <Table.HeaderCell>Julio</Table.HeaderCell>
-                              <Table.HeaderCell>Agosto</Table.HeaderCell>
-                              <Table.HeaderCell>Septiembre</Table.HeaderCell>
-                              <Table.HeaderCell>Octubre</Table.HeaderCell>
-                              <Table.HeaderCell>Noviembre</Table.HeaderCell>
-                              <Table.HeaderCell>Diciembre</Table.HeaderCell>
-                            </Table.Row>
-                          </Table.Header>
-                          <Table.Body>
-                            <Table.Row>
-                              {[...new Array(12)].map(item => {
-                                return (
-                                  <IndicatorCalcNumerador
-                                    indicator={indicator}
-                                  />
-                                );
-                              })}
-                            </Table.Row>
-                          </Table.Body>
-                        </Table>
-                      </Modal.Content>
-                    </Modal>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
-        </div>
       </Page>
       <ToastContainer />
     </Fragment>

@@ -3,6 +3,7 @@ import { Route, Switch, Redirect } from "react-router-dom";
 import Error404 from "../pages/Error404";
 import Dashboard from "../pages/Dashboard";
 import Login from "../pages/Login";
+import DashboardProcess from "../pages/DashboardProcess";
 
 const PrivateRoute = ({ component: Component, authed, rest }) => (
   <Route
@@ -35,6 +36,12 @@ const Routes = ({ auth }) => {
         exact
         authed={auth}
         component={Dashboard}
+      />
+      <PrivateRoute
+        path="/dashboard/process/:id"
+        exact
+        authed={auth}
+        component={DashboardProcess}
       />
       <Route component={Error404} />
     </Switch>
